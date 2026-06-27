@@ -1,0 +1,71 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+.atom/
+.history
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+
+# Generated plugin registrants (recreated by flutter pub get)
+**/android/**/GeneratedPluginRegistrant.java
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json
+
+# Secrets — never commit signing keys or env files
+.env
+.env.*
+!.env.example
+**/key.properties
+**/*.keystore
+**/*.jks
+
+# Android
+**/android/local.properties
+**/android/.gradle/
+**/android/captures/
+**/android/.cxx/
+**/android/.kotlin/
+**/android/**/build/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# iOS / desktop (Flutter project; keep repo clean if unused)
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Flutter.podspec
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+
+# Logs / misc
+*.log
+*.class
+*.pyc
+migrate_working_dir/
+.build/
+.buildlog/
+.svn/
+.swiftpm/

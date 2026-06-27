@@ -1,0 +1,10 @@
+# Android module ignores (see root .gitignore for full list)
+/.gradle
+/captures/
+/local.properties
+.cxx/
+.kotlin/
+key.properties
+**/*.keystore
+**/*.jks
+GeneratedPluginRegistrant.java
