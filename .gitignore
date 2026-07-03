@@ -64,6 +64,7 @@ app.*.map.json
 *.log
 *.class
 *.pyc
+deploy_phone.bat
 migrate_working_dir/
 .build/
 .buildlog/
