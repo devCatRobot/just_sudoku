@@ -17,7 +17,10 @@ import 'xy_chain.dart';
 import 'y_wing.dart';
 
 /// Maximum share of placed values that may come from naked or hidden singles.
-const double extremeMaxSinglePlacementRatio = 0.15;
+const double extremeMaxSinglePlacementRatio = 0.22;
+
+/// Cap pointing/fish/wing steps so Extreme puzzles do not become long chain hunts.
+const int extremeMaxAdvancedTechniqueSteps = 6;
 
 enum SudokuTechniqueLevel {
   none(0),
@@ -50,8 +53,11 @@ class TechniqueSolveResult {
   final SudokuTechniqueLevel hardestTechnique;
 }
 
-/// Extreme: pointing through swordfish and wings. Evil adds chains/colouring.
-const SudokuTechniqueLevel extremeMaxTechnique = SudokuTechniqueLevel.swordfish;
+/// Extreme: pointing through X-Wing and Y-Wing. No W-Wing, swordfish, or chains.
+const SudokuTechniqueLevel extremeMaxTechnique = SudokuTechniqueLevel.xWing;
+const Set<SudokuTechniqueLevel> extremeSkippedTechniques = {
+  SudokuTechniqueLevel.wWing,
+};
 const SudokuTechniqueLevel extremeMinHardestTechnique =
     SudokuTechniqueLevel.pointing;
 const SudokuTechniqueLevel evilMaxTechnique = SudokuTechniqueLevel.xyChain;
@@ -63,6 +69,7 @@ bool isSolvableWithExtremeTechniques(List<int?> puzzle) {
   return solveWithTechniques(
     puzzle,
     maxTechnique: extremeMaxTechnique,
+    skipTechniques: extremeSkippedTechniques,
   ).solved;
 }
 
@@ -85,6 +92,8 @@ bool isValidExtremePuzzle(List<int?> puzzle) {
     maxSinglePlacements: maxSingles,
     maxTechnique: extremeMaxTechnique,
     requireHardestAtLeast: extremeMinHardestTechnique,
+    skipTechniques: extremeSkippedTechniques,
+    maxAdvancedTechniqueSteps: extremeMaxAdvancedTechniqueSteps,
   ).solved;
 }
 
@@ -93,6 +102,8 @@ TechniqueSolveResult solveWithTechniques(
   int? maxSinglePlacements,
   SudokuTechniqueLevel maxTechnique = SudokuTechniqueLevel.xyChain,
   SudokuTechniqueLevel? requireHardestAtLeast,
+  Set<SudokuTechniqueLevel> skipTechniques = const {},
+  int? maxAdvancedTechniqueSteps,
 }) {
   final cellCount = SudokuBoard.size * SudokuBoard.size;
   if (puzzle.length != cellCount) {
@@ -101,7 +112,24 @@ TechniqueSolveResult solveWithTechniques(
 
   final totalPlacements = puzzle.where((value) => value == null).length;
   var singlePlacements = 0;
+  var advancedTechniqueSteps = 0;
   var hardestTechnique = SudokuTechniqueLevel.none;
+
+  bool noteAdvancedTechnique(SudokuTechniqueLevel technique) {
+    hardestTechnique = _maxTechniqueLevel(hardestTechnique, technique);
+    if (technique.rank < SudokuTechniqueLevel.pointing.rank) {
+      return true;
+    }
+
+    advancedTechniqueSteps++;
+    return maxAdvancedTechniqueSteps == null ||
+        advancedTechniqueSteps <= maxAdvancedTechniqueSteps;
+  }
+
+  bool isTechniqueEnabled(SudokuTechniqueLevel technique) {
+    return technique.rank <= maxTechnique.rank &&
+        !skipTechniques.contains(technique);
+  }
 
   var board = SudokuBoard.fromValues(
     _puzzleToRows(puzzle),
@@ -159,98 +187,130 @@ TechniqueSolveResult solveWithTechniques(
       continue;
     }
 
-    if (SudokuTechniqueLevel.pointing.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.pointing)) {
       final afterPointing = _tryApplyPointing(board);
       if (afterPointing != null) {
         board = afterPointing;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.pointing,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.pointing)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.yWing.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.yWing)) {
       final afterYWing = _tryApplyYWing(board);
       if (afterYWing != null) {
         board = afterYWing;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.yWing,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.yWing)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.wWing.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.wWing)) {
       final afterWWing = _tryApplyWWing(board);
       if (afterWWing != null) {
         board = afterWWing;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.wWing,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.wWing)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.xWing.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.xWing)) {
       final afterXWing = _tryApplyXWing(board);
       if (afterXWing != null) {
         board = afterXWing;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.xWing,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.xWing)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.swordfish.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.swordfish)) {
       final afterSwordfish = _tryApplySwordfish(board);
       if (afterSwordfish != null) {
         board = afterSwordfish;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.swordfish,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.swordfish)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.simpleColouring.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.simpleColouring)) {
       final afterSimpleColouring = _tryApplySimpleColouring(board);
       if (afterSimpleColouring != null) {
         board = afterSimpleColouring;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.simpleColouring,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.simpleColouring)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.xChain.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.xChain)) {
       final afterXChain = _tryApplyXChain(board);
       if (afterXChain != null) {
         board = afterXChain;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.xChain,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.xChain)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }
 
-    if (SudokuTechniqueLevel.xyChain.rank <= maxTechnique.rank) {
+    if (isTechniqueEnabled(SudokuTechniqueLevel.xyChain)) {
       final afterXYChain = _tryApplyXYChain(board);
       if (afterXYChain != null) {
         board = afterXYChain;
-        hardestTechnique = _maxTechniqueLevel(
-          hardestTechnique,
-          SudokuTechniqueLevel.xyChain,
-        );
+        if (!noteAdvancedTechnique(SudokuTechniqueLevel.xyChain)) {
+          return TechniqueSolveResult(
+            solved: false,
+            singlePlacements: singlePlacements,
+            totalPlacements: totalPlacements,
+            hardestTechnique: hardestTechnique,
+          );
+        }
         continue;
       }
     }

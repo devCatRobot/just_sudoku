@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/puzzle_factory.dart';
 import '../models/stored_puzzle.dart';
 import '../models/sudoku_difficulty.dart';
+import '../models/techniques/evil_solver.dart';
+import '../models/techniques/extreme_solver.dart';
 
 class PuzzleBufferService {
   PuzzleBufferService._();
@@ -19,7 +21,7 @@ class PuzzleBufferService {
   bool _usePersistentStorage = true;
 
   static String _storageKey(SudokuDifficulty difficulty) {
-    return 'puzzle_buffer_v2_${difficulty.name}';
+    return 'puzzle_buffer_v3_${difficulty.name}';
   }
 
   /// Pre-fills the Extreme buffer once on app start.
@@ -46,6 +48,10 @@ class PuzzleBufferService {
         generateBufferedPuzzleForDifficultyIsolate,
         difficulty.index,
       );
+      if (!_isPlayablePuzzle(generated, difficulty)) {
+        continue;
+      }
+
       puzzles = [...puzzles, generated.trusted()];
       await _savePuzzles(difficulty, puzzles);
     }
@@ -73,7 +79,7 @@ class PuzzleBufferService {
         );
       }
 
-      if (_isPlayablePuzzle(puzzle)) {
+      if (_isPlayablePuzzle(puzzle, difficulty)) {
         return puzzle.trusted();
       }
     }
@@ -121,7 +127,7 @@ class PuzzleBufferService {
           generateBufferedPuzzleForDifficultyIsolate,
           difficulty.index,
         );
-        if (!_isPlayablePuzzle(generated)) {
+        if (!_isPlayablePuzzle(generated, difficulty)) {
           continue;
         }
 
@@ -142,12 +148,25 @@ class PuzzleBufferService {
     }
   }
 
-  bool _isPlayablePuzzle(StoredPuzzle puzzle) {
+  bool _isPlayablePuzzle(StoredPuzzle puzzle, SudokuDifficulty difficulty) {
     if (!puzzle.puzzle.any((value) => value == null)) {
       return false;
     }
 
-    return puzzle.isStoredSolutionConsistent || puzzle.hasUniquePlayableSolution;
+    if (!puzzle.isStoredSolutionConsistent &&
+        !puzzle.hasUniquePlayableSolution) {
+      return false;
+    }
+
+    switch (difficulty) {
+      case SudokuDifficulty.extreme:
+        return isValidExtremePuzzle(puzzle.puzzle);
+      case SudokuDifficulty.evil:
+        return isValidEvilPuzzle(puzzle.puzzle);
+      case SudokuDifficulty.easy:
+      case SudokuDifficulty.hard:
+        return true;
+    }
   }
 
   Future<List<StoredPuzzle>> _loadPuzzles(SudokuDifficulty difficulty) async {
@@ -165,7 +184,7 @@ class PuzzleBufferService {
       final decoded = jsonDecode(raw) as List;
       final puzzles = decoded
           .map((entry) => StoredPuzzle.fromJson(entry as Map<String, dynamic>))
-          .where(_isPlayablePuzzle)
+          .where((puzzle) => _isPlayablePuzzle(puzzle, difficulty))
           .map((puzzle) => puzzle.trusted())
           .toList();
       _memoryPuzzles[difficulty] = puzzles;

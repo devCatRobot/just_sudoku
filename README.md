@@ -21,7 +21,7 @@ Most Sudoku apps are cluttered with ads and extra screens. **Just Sudoku** was b
 |-------|-------------|
 | **Easy** | Solvable with naked and hidden singles only |
 | **Hard** | Adds pairs and triples; singles are capped |
-| **Extreme** | Advanced techniques: pointing, wings, X-Wing, Swordfish |
+| **Extreme** | Pointing, pairs/triples, Y-Wing, X-Wing (no chains; capped steps) |
 | **Evil** | Full solver set, including chains and colouring |
 
 Every generated puzzle has a **unique solution**.

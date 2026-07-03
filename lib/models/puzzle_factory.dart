@@ -97,7 +97,7 @@ StoredPuzzle generateExtremePuzzleForBuffer() {
     }
   }
 
-  return _generateUniquePuzzle(SudokuDifficulty.extreme.cellsToRemove);
+  return _generateUniquePuzzle(SudokuDifficulty.hard.cellsToRemove);
 }
 
 StoredPuzzle generateExtremePuzzle() {

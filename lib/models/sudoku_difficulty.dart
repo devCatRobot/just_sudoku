@@ -1,7 +1,7 @@
 enum SudokuDifficulty {
   easy(40),
   hard(50),
-  extreme(58),
+  extreme(54),
   /// Max cells to try removing during generation. Evil difficulty is defined
   /// by technique requirements, not by how many numbers are removed.
   evil(50);
